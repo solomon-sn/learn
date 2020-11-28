@@ -1,0 +1,238 @@
+# Import data from a MySQL database into HDFS using Sqoop
+#1	- Importing orders table data from retail_db into HDFS 
+#	- textfile format with default delimiter, default mapper
+#	- even if we dont specify target-dir, the output will be written to default hdfs folder
+#	- when we use --query or -e switch, we must specify target-dir 
+sqoop import \
+--connect="jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table orders \
+--target-dir /user/cloudera/orders \
+--as-textfile
+
+#2	- Importing orders table data from retail_db into HDFS 
+#	- textfile format with default delimiter, default mapper
+#	- Clean up target dir if it exists
+sqoop import \
+--connect="jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table orders \
+--target-dir /user/cloudera/orders \
+--as-textfile \
+--delete-target-dir
+
+#3	- Importing orders table data from retail_db into HDFS 
+#	- textfile format with only one mapper (so, total files will be 1)
+#	- Clean up target dir if it exists
+sqoop import \
+--connect="jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table orders \
+--target-dir /user/cloudera/orders \
+--as-textfile \
+--delete-target-dir \
+--m 1 \
+--fields-terminated-by "|" \
+--lines-terminated-by "\n"
+
+#4	- Importing orders table data from retail_db into HDFS 
+#	- textfile format with only one mapper (so, total files will be 1)
+#	- Conditional Import 
+sqoop import \
+--connect="jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table orders \
+--target-dir /user/cloudera/orders \
+--as-textfile \
+--delete-target-dir \
+--m 1 \
+--fields-terminated-by "|" \
+--lines-terminated-by "\n" \
+--where "order_id < 11"
+
+#5	- Importing orders table data from retail_db into HDFS with append
+#	- textfile format with only one mapper (so, total files will be 1)
+#	- Conditional Import 
+sqoop import \
+--connect="jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table orders \
+--target-dir /user/cloudera/orders \
+--as-textfile \
+--append \
+--m 1 \
+--fields-terminated-by "|" \
+--lines-terminated-by "\n" \
+--where "order_id > 10 and order_id < 101"
+
+#6	- Importing orders table data from retail_db into HDFS 
+#	- textfile format with only one mapper (so, total files will be 1)
+#	- Clean up target dir if it exists
+#	- Only specific columns (order_id, order_date, order_status)
+#	- When we use --columns switch, there shouldn't be any white-space char between columns
+sqoop import \
+--connect="jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table orders \
+--target-dir /user/cloudera/orders \
+--as-textfile \
+--delete-target-dir \
+--m 1 \
+--fields-terminated-by "|" \
+--lines-terminated-by "\n" \
+--columns order_id,order_date,order_status
+
+#7	- Importing orders table data from retail_db into HDFS
+#	- textfile format with freeform query 
+#	- when using freeform query, we must specify target-dir
+#	- and also, we must specify split-by switch to specify column provided if we dont pass --m 1
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username retail_dba \
+--password cloudera \
+--delete-target-dir \
+--as-textfile \
+--target-dir=/user/cloudera/orders \
+--query "select * from orders where \$CONDITIONS" \
+--split-by order_customer_id
+
+#8	- Importing orders table data from retail_db into HDFS
+#	- sequencefile
+#	- when using freeform query, we must specify target-dir
+#	- and also, we must specify split-by switch to specify column provided if we dont pass --m 1
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username retail_dba \
+--password cloudera \
+--delete-target-dir \
+--as-sequencefile \
+--target-dir=/user/cloudera/orders \
+--query "select * from orders where \$CONDITIONS" \
+--split-by order_customer_id
+
+#9	- Importing orders table data from retail_db into HDFS
+#	- avrodatafile (This option will create .avsc file (AVRO Schema file) in the local working folder
+#	- when using freeform query, we must specify target-dir
+#	- and also, we must specify split-by switch to specify column provided if we dont pass --m 1
+sqoop import \
+--connect jdbc:mysql://quickstart.cloudera:3306/retail_db \
+--username retail_dba \
+--password cloudera \
+--delete-target-dir \
+--as-avrodatafile \
+--target-dir=/user/cloudera/orders \
+--query "select * from orders where \$CONDITIONS" \
+--split-by order_customer_id
+
+#10	- Importing all tables from retail_db into HDFS
+#	- as textfile
+sqoop import-all-tables \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--as-textfile
+
+###########################################################################################################
+
+# Export data to a MySQL database from HDFS using Sqoop
+#1	- Exporting orders data from HDFS to MySQL table orders_export_test
+create table orders_export_test select * from orders where 1=2;
+
+sqoop export \
+--connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" \
+--username retail_dba \
+--password cloudera \
+--table orders_export_test \
+--export-dir /user/cloudera/orders
+
+###########################################################################################################
+
+# Change the delimiter and file format of data during import using Sqoop
+
+###########################################################################################################
+
+# Ingest real-time and near-real time (NRT) streaming data into HDFS using Flume
+#1	- Ingest real-time data into HDFS 
+#	- Below is the flume conf file to read the data realtime
+#	- It will read the result of "tail" command and ingest into HDFS 
+#	- Save this below conf into flume-exec-test.conf file under your local folder 
+
+# Name the components on this agent
+a1.sources = r1
+a1.sinks = k1
+a1.channels = c1
+
+# Describe/configure the source
+a1.sources.r1.type = exec
+a1.sources.r1.command = tail -F /opt/gen_logs/logs/access.log
+
+# Describe the sink
+a1.sinks.k1.type = hdfs
+a1.sinks.k1.hdfs.path = hdfs://quickstart.cloudera/user/cloudera/flume/%y-%m-%d
+a1.sinks.k1.hdfs.filePrefix = log
+a1.sinks.k1.hdfs.fileType = DataStream
+a1.sinks.k1.hdfs.useLocalTimeStamp = true
+
+# Use a channel which buffers events in memory
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 1000
+a1.channels.c1.transactionCapacity = 100
+
+# Bind the source and sink to the channel
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+
+#	- To start populating logs, we can use the following command
+startlogs
+
+#	- To start the flume agent
+flume-ng agent --conf /home/cloudera --conf-file /home/cloudera/flume-exec-test.conf --name a1
+
+#2	- Ingest near real-time data into HDFS 
+#	- Below is the flume conf file to read the data near-realtime
+#	- It will read the telnet inputs and ingest into HDFS 
+#	- Save this below conf into flume-netcat-test.conf file under your local folder 
+
+# Name the components on this agent
+a1.sources = r1
+a1.sinks = k1
+a1.channels = c1
+
+# Describe/configure the source
+a1.sources.r1.type = netcat
+a1.sources.r1.bind = localhost
+a1.sources.r1.port = 44444
+
+# Describe the sink
+a1.sinks.k1.type = hdfs
+a1.sinks.k1.hdfs.path = hdfs://quickstart.cloudera/user/cloudera/flume
+a1.sinks.k1.hdfs.filePrefix = netcat
+a1.sinks.k1.hdfs.fileType = DataStream
+
+# Use a channel which buffers events in memory
+a1.channels.c1.type = memory
+a1.channels.c1.capacity = 1000
+a1.channels.c1.transactionCapacity = 100
+
+# Bind the source and sink to the channel
+a1.sources.r1.channels = c1
+a1.sinks.k1.channel = c1
+
+#	- To start populating input, we need to launch telnet on localhost:44444
+telnet localhost 44444
+
+#	- To start the flume agent
+flume-ng agent --conf /home/cloudera --conf-file /home/cloudera/flume-netcat-test.conf --name a1
+
+###########################################################################################################
+
+# Load data into and out of HDFS using the Hadoop File System (FS) commands
+
+###########################################################################################################
+
